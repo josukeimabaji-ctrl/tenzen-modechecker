@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>天膳 MODE CHECKER BETA | JO助</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#2a2f3a;--text:#f3f5f7;--muted:#aeb6c2;--accent:#4da3ff;--warn:#8a5b00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif}
+.wrap{max-width:760px;margin:auto;padding:14px 12px 92px}
+h1{font-size:20px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button,select{font:inherit}
+button{border:1px solid var(--line);background:#222733;color:var(--text);padding:11px 12px;border-radius:10px}
+button.primary{background:var(--accent);color:#fff;border-color:transparent;font-weight:700}
+button.warn{background:var(--warn)}
+button.danger{background:#7e2727}
+button.active{outline:2px solid var(--accent)}
+select{background:#222733;color:var(--text);border:1px solid var(--line);padding:10px;border-radius:10px}
+.small{font-size:12px;color:var(--muted)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mode{padding:10px;border-radius:10px;background:#11151b;border:1px solid var(--line);text-align:center}
+.mode b{font-size:22px;display:block}
+.bar{height:8px;background:#282e38;border-radius:10px;overflow:hidden;margin-top:6px}
+.fill{height:100%;background:var(--accent)}
+.sectiontitle{font-size:14px;color:var(--muted);margin:0 0 8px}
+.note{font-size:12px;line-height:1.55;color:var(--muted)}
+.voicehint{margin-top:8px;padding:8px 10px;border-radius:9px;background:#11151b;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.tablelist{display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.tableitem{flex:0 0 auto;background:#11151b;border:1px solid var(--line);border-radius:8px;padding:6px 7px;cursor:pointer;min-width:48px;text-align:center}
+.tableitem .tn{font-size:12px;font-weight:800;line-height:1.1}
+.tableitem .tp{font-size:10px;color:var(--muted);margin-top:2px}
+.detailgrid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;margin-top:8px}
+.detailcell{background:#11151b;border:1px solid var(--line);border-radius:7px;padding:5px 2px;text-align:center}
+.detailcell.current{outline:2px solid var(--accent);background:#182536}
+.detailcell .pos{font-size:9px;color:var(--muted);white-space:nowrap}
+.detailcell .m{font-size:16px;font-weight:800;margin-top:1px}
+.history{max-height:260px;overflow:auto}
+.history div{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(15,17,21,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px}
+.sticky .inner{max-width:760px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sticky button{padding:15px;font-size:17px;font-weight:800}
+</style>
+
+<style>
+.livePanel{
+  position:sticky;
+  top:0;
+  z-index:70;
+  background:rgba(23,26,33,.985);
+  backdrop-filter:blur(8px);
+  box-shadow:0 8px 18px rgba(0,0,0,.32);
+  margin-top:8px;
+}
+.livePanel .liveHead{margin-bottom:8px}
+.livePanel .liveSlip{font-size:23px;font-weight:800}
+.livePanel #settingPreset{min-width:135px}
+.livePanel .liveModes .mode{padding:6px 2px}
+.livePanel .liveModes .mode b{font-size:20px}
+.livePanel .liveModes .bar{height:4px}
+.livePanel .presetInfoCompact{
+  margin-top:7px!important;
+  padding:5px 7px;
+  font-size:10px;
+  line-height:1.35;
+}
+</style>
+
+<style>
+.voiceFilterRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:9px;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:#11151b;
+  font-size:13px;
+}
+.voiceFilterRow input{
+  width:19px;
+  height:19px;
+  accent-color:var(--accent);
+}
+</style>
+
+<style>
+/* v0.3.8: モード示唆％の変化エフェクト */
+#modes .mode.modePulse{
+  animation:modePulse .38s ease-out;
+}
+#modes .mode.modeUp{
+  animation:modeUp .48s ease-out;
+}
+#modes .mode.modeDown{
+  animation:modeDown .48s ease-out;
+}
+@keyframes modePulse{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(77,163,255,0)}
+  45%{transform:scale(1.035);box-shadow:0 0 0 2px rgba(77,163,255,.75)}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(77,163,255,0)}
+}
+@keyframes modeUp{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.07);box-shadow:0 0 0 2px rgba(255,255,255,.65)}
+  100%{transform:scale(1);box-shadow:none}
+}
+@keyframes modeDown{
+  0%{opacity:1}
+  35%{opacity:.52}
+  100%{opacity:1}
+}
+</style>
+
+<style>
+.startSlipRow{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0 0 8px;
+}
+.startSlipRow select{
+  padding:6px 8px;
+  font-size:13px;
+}
+.startSlipNote{
+  opacity:.78;
+  white-space:nowrap;
+}
+@media(max-width:420px){
+  .startSlipNote{font-size:10px}
+}
+</style>
+<meta name="theme-color" content="#111827">
+<meta name="description" content="スマスロ 絆2 天膳 BLACK EDITION モード判別ツール">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<div class="wrap">
+<h1>天膳 MODE CHECKER <span class="small">BETA • by JO助</span></h1>
+
+<div class="card livePanel" id="livePanel">
+  <div class="row liveHead" style="justify-content:space-between;align-items:center">
+    <div>
+      <div class="small">現在</div>
+      <div class="liveSlip"><span id="slip">0</span>スルー</div>
+    </div>
+    <div>
+      <div class="small">設定条件</div>
+      <select id="settingPreset">
+        <option value="unknown">不明</option>
+        <option value="odd">奇数っぽい</option>
+        <option value="even">偶数っぽい</option>
+        <option value="1">設定1</option>
+        <option value="2">設定2</option>
+        <option value="3">設定3</option>
+        <option value="4">設定4</option>
+        <option value="5">設定5</option>
+        <option value="6">設定6</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="startSlipRow">
+    <span class="small">拾い開始</span>
+    <select id="startSlip" onchange="changeStartSlip(this.value)">
+      <option value="0">0スルー</option>
+      <option value="1">1スルー</option>
+      <option value="2">2スルー</option>
+      <option value="3">3スルー</option>
+      <option value="4">4スルー</option>
+      <option value="5">5スルー</option>
+      <option value="6">6スルー</option>
+      <option value="7">7スルー</option>
+    </select>
+    <span class="small startSlipNote">過去情報なしで開始</span>
+  </div>
+
+  <div class="liveModes">
+    <div class="grid4" id="modes"></div>
+  </div>
+
+  <div id="presetInfo" class="hint presetInfoCompact"></div>
+  <select id="setting" style="display:none"></select>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">有力テーブル</div>
+  <div class="tablelist" id="tables"></div>
+  <div id="tableDetailInline" style="display:none"></div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">AT終了ボイス（確率計算には未反映）</div>
+  <select id="voice" style="width:100%" onchange="updateVoiceHint()">
+    <option value="">未入力</option>
+    <option>では、参りましょう</option>
+    <option>出立の準備じゃ</option>
+    <option>何かが起こる予感がします…</option>
+    <option>怪しき気配じゃ</option>
+    <option>宴の支度が整っております</option>
+    <option>今が積年の恨みを晴らすときじゃ！</option>
+  </select>
+  <div id="voiceHint" class="voicehint">テーブル示唆：未入力</div>
+  <label class="voiceFilterRow">
+    <input type="checkbox" id="voiceFilter" onchange="render()">
+    <span>示唆対象のテーブルだけ表示</span>
+  </label>
+  <div class="note">※表示だけ絞り込みます。対象外テーブルの内部確率は0%にせず保持します。</div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">ミニキャラ（陽炎 / 天膳）</div>
+  <div class="row">
+    <button onclick="setRole('replay')" id="role-replay">リプレイ</button>
+    <button onclick="setRole('other')" id="role-other" class="active">ハズレ・ベル・チャンス目</button>
+  </div>
+  <div class="small" style="margin-top:6px">※ベル揃いは共通ベルを除く。チャンス目のゲームはこの区分でミニキャラを入力し、別途「チャンス目 +1」も入力。</div>
+  <div class="row" style="margin-top:8px">
+    <button onclick="mini(1)">後ろを向く / 去る</button>
+    <button onclick="mini(2)">ため息 / 不機嫌</button>
+    <button onclick="mini(3)">左肩を出す / 微笑</button>
+    <button onclick="mini(4)">両肩を出す / 笑う</button>
+    <button onclick="mini(5)">妖艶なポーズ / 大笑い</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">忍びの玉</div>
+  <div class="row">
+    <button onclick="orb('怪')">怪</button>
+    <button onclick="orb('気配')">気配</button>
+    <button onclick="orb('兆')">兆</button>
+    <button onclick="orb('好機')">好機</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">C以上濃厚演出</div>
+  <div class="row">
+    <button onclick="cplus('弦之介カットイン（BC非当選）')">弦之介CI</button>
+    <button onclick="cplus('朧カットイン（BC非当選）')">朧CI</button>
+    <button onclick="cplus('入賞LED白')">入賞LED白</button>
+    <button onclick="cplus('赤墨→吉田宿')">赤墨→吉田宿</button>
+    <button onclick="cplus('響八郎強→吉田宿')">響八郎強→吉田宿</button>
+    <button onclick="cplus('ステージ移行矛盾')">ステージ移行矛盾</button>
+  </div>
+  <div class="small" style="margin-top:6px">ステージ移行矛盾：甲賀卍谷→七里の渡し / 伊賀鍔隠れ→佐屋路</div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">朧BC終了背景</div>
+  <div class="row">
+    <button onclick="oboro('星空')">星空</button>
+    <button onclick="oboro('流れ星')">流れ星</button>
+    <button onclick="oboro('流星群')">流星群</button>
+    <button onclick="oboro('月食')">月食</button>
+    <button onclick="oboro('赤満月')">赤満月</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sectiontitle">履歴</div>
+  <div class="history" id="history"></div>
+  <div class="row" style="margin-top:10px">
+    <button onclick="undoLast()">1つ戻す</button>
+    <button class="danger" onclick="resetAll(true)">実戦をリセット</button>
+  </div>
+</div>
+
+<div class="card note">
+同一ゲームでチャンス目＋ミニキャラなら、ミニキャラは「ハズレ・ベル・チャンス目」で入力し、別途「チャンス目＋1」も押してください。<br>
+有力テーブルは横1列。タップするとその場で0〜7スルーを表示し、現在位置を強調します。
+</div>
+</div>
+
+<div style="text-align:center;padding:18px 12px 92px;color:#8b93a7;font-size:12px;line-height:1.7">
+<div>天膳 MODE CHECKER • BETA</div><div>Developed by JO助</div>
+<div style="margin-top:4px">解析情報をもとにした参考判別ツールです。実戦結果を保証するものではありません。</div>
+<div>Build v0.3.16</div></div>
+<div class="sticky">
+  <div class="inner">
+    <button class="warn" onclick="chance()">チャンス目 ＋1</button>
+    <button class="primary" onclick="nextBC()">BCスルー → 次へ</button>
+  </div>
+</div>
+
+<script>
+const TABLES={
+1:['B','B','A','B','A','B','D',null],2:['B','A','B','A','B','A','D',null],
+3:['B','B','A','B','B','C','D',null],4:['B','A','B','A','C','B','D',null],
+5:['A','A','A','A','A','A','C','D'],6:['B','B','B','C','B','C','D',null],
+7:['B','A','C','B','C','B','D',null],8:['C','C','C','C','C','C','D',null],
+9:['C','A','C','A','C','B','D',null],10:['B','C','A','B','A','B','D',null],
+11:['C','B','B','A','B','A','D',null],12:['B','C','B','C','B','C','D',null],
+13:['C','B','C','B','C','B','D',null],14:['A','C','A','D',null,null,null,null],
+15:['A','D',null,null,null,null,null,null],16:['D',null,null,null,null,null,null,null]
+};
+const RATE={
+1:[14.9,15.6,9.3,15.6,9.8,9.3,6.2,0.8,1.6,6.2,2.3,4.7,1.6,0.8,0.8,0.4],
+2:[11.7,11.7,11.7,11.7,4.7,7.8,7.8,3.1,3.1,6.2,3.1,9.3,3.1,1.6,2.3,0.8],
+3:[14.5,14.9,9.3,15.6,9.8,9.3,6.2,0.8,1.6,6.2,2.3,4.7,1.6,2.0,0.8,0.4],
+4:[10.2,10.2,11.7,11.7,4.7,7.8,7.8,3.1,3.1,6.2,3.1,9.3,3.1,3.9,3.1,0.8],
+5:[12.5,13.3,9.3,15.6,9.8,9.3,6.2,0.8,1.6,6.2,2.3,4.7,1.6,4.7,1.6,0.4],
+6:[4.3,4.3,9.4,9.4,3.1,15.6,15.6,3.1,3.1,6.3,3.1,9.4,3.1,6.3,3.1,0.8]
+};
+const MINI_OTHER={1:[.251,.250,.200,.200],2:[.619,.545,.539,.480],3:[.125,.175,.200,.200],4:[.005,.030,.060,.100],5:[0,0,.001,.020]};
+const MINI_REPLAY={1:[.005,.050,.075,.100],2:[.870,.775,.705,.627],3:[.125,.175,.200,.202],4:[0,0,.020,.051],5:[0,0,0,.020]};
+const ORB={'怪':[.790,.750,.615,.580],'気配':[.200,.250,.300,.300],'兆':[.010,0,.080,.100],'好機':[0,0,.005,.020]};
+const OBORO={'星空':[.500,.156,.100,.125],'流れ星':[.500,.244,.150,.125],'流星群':[0,.600,.333,.125],'月食':[0,0,.417,.125],'赤満月':[0,0,0,.500]};
+const CHANCE_ODD=[[.500,.484,.012,.004],[0,.664,.332,.004],[0,0,.750,.250],[0,0,0,1]];
+const CHANCE_EVEN=[[.332,.644,.020,.004],[0,.500,.496,.004],[0,0,.664,.336],[0,0,0,1]];
+
+let setting=1,startSlip=0,slip=0,role='other',hist=[],actions=[],tw={},md={},jw={},jm={},undoStack=[],selectedTable=null;
+
+function snapshot(){return {setting,startSlip,slip,role,hist:[...hist],actions:JSON.parse(JSON.stringify(actions)),tw:JSON.parse(JSON.stringify(tw)),md:JSON.parse(JSON.stringify(md)),jw:JSON.parse(JSON.stringify(jw)),jm:JSON.parse(JSON.stringify(jm)),selectedTable}}
+function pushUndo(){undoStack.push(snapshot());if(undoStack.length>100)undoStack.shift()}
+function restoreState(s){setting=s.setting;startSlip=(s.startSlip??0);slip=s.slip;role=s.role;hist=[...s.hist];actions=JSON.parse(JSON.stringify(s.actions||[]));tw=JSON.parse(JSON.stringify(s.tw||{}));md=JSON.parse(JSON.stringify(s.md||{}));jw=JSON.parse(JSON.stringify(s.jw||{}));jm=JSON.parse(JSON.stringify(s.jm||{}));selectedTable=s.selectedTable;document.getElementById('setting').value=String(setting);const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);setRole(role);render()}
+function undoLast(){if(!undoStack.length){alert('戻せる履歴がありません');return}restoreState(undoStack.pop())}
+
+function init(){
+ const s=document.getElementById('setting');
+ for(let i=1;i<=6;i++){const o=document.createElement('option');o.value=i;o.textContent='設定'+i;s.appendChild(o)}
+ s.value='1';
+ s.onchange=()=>{setting=+s.value;replayActions()};
+ const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);
+ resetAll(false);updateVoiceHint();
+}
+function updateVoiceHint(){
+ const v=document.getElementById('voice').value;
+ const map={
+ '':'テーブル示唆：未入力',
+ 'では、参りましょう':'テーブル示唆：なし（デフォルト）',
+ '出立の準備じゃ':'テーブル示唆：なし（デフォルト）',
+ '何かが起こる予感がします…':'テーブル示唆：T8・T9・T11・T12・T13・T14・T15・T16',
+ '怪しき気配じゃ':'テーブル示唆：T8・T9・T13・T14・T15・T16',
+ '宴の支度が整っております':'テーブル示唆：T15・T16',
+ '今が積年の恨みを晴らすときじゃ！':'テーブル示唆：対象外／宿怨ループ濃厚'};
+ document.getElementById('voiceHint').textContent=map[v]||'テーブル示唆：未登録';
+ if(typeof render==='function')render();
+}
+function normalizeTables(){let z=Object.values(tw).reduce((a,b)=>a+b,0)||1;Object.keys(tw).forEach(k=>tw[k]/=z)}
+function normalizeMode(v){let z=v.reduce((a,b)=>a+b,0);return z>0?v.map(x=>x/z):[0,0,0,0]}
+function baselineForTable(t){const m=TABLES[t][slip];let v=[0,0,0,0];if(m)v['ABCD'.indexOf(m)]=1;return v}
+function jointPresetPrior(){
+ const p=document.getElementById('settingPreset');
+ const v=p?p.value:'1';
+ if(v==='unknown') return {1:.40,2:.40,3:.05,4:.05,5:.05,6:.05};
+ if(v==='odd') return {1:7/30,2:.10,3:7/30,4:.10,5:7/30,6:.10};
+ if(v==='even') return {1:.10,2:7/30,3:.10,4:7/30,5:.10,6:7/30};
+ return null;
+}
+function isJointPreset(){return !!jointPresetPrior()}
+function normalizeJoint(){
+ let z=Object.values(jw).reduce((a,b)=>a+b,0)||1;
+ Object.keys(jw).forEach(k=>jw[k]/=z);
+}
+function jointBaselineForTable(t){
+ const m=TABLES[t][slip];let v=[0,0,0,0];
+ if(m)v['ABCD'.indexOf(m)]=1;
+ return v;
+}
+function aggregateJointTables(){
+ const out={};
+ Object.entries(jw).forEach(([key,w])=>{
+   const t=+key.split('-')[1];
+   out[t]=(out[t]||0)+w;
+ });
+ return out;
+}
+function initAtStartSlip(){
+ slip=startSlip;hist=[];actions=[];tw={};md={};jw={};jm={};selectedTable=null;
+ if(isJointPreset()){
+   const prior=jointPresetPrior();
+   for(let s=1;s<=6;s++){
+     const sp=prior[s]||0;
+     const rowSum=RATE[s].reduce((a,b)=>a+b,0)||100;
+     RATE[s].forEach((r,i)=>{
+       const t=i+1,key=`${s}-${t}`;
+       if(TABLES[t][slip]){
+         jw[key]=sp*(r/rowSum);
+         jm[key]=jointBaselineForTable(t);
+       }else{
+         jw[key]=0;
+         jm[key]=[0,0,0,0];
+       }
+     });
+   }
+   normalizeJoint();
+ }else{
+   RATE[setting].forEach((r,i)=>{
+     const t=i+1;
+     if(TABLES[t][slip]){
+       tw[t]=r/100;
+       md[t]=baselineForTable(t);
+     }else{
+       tw[t]=0;
+       md[t]=[0,0,0,0];
+     }
+   });
+   normalizeTables();
+ }
+}
+function changeStartSlip(v){
+ const n=Math.max(0,Math.min(7,parseInt(v,10)||0));
+ startSlip=n;
+ initAtStartSlip();
+ undoStack=[];
+ render();
+}
+function resetAll(clearUndo=true){
+ initAtStartSlip();
+ if(clearUndo)undoStack=[];
+ const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);
+ render()
+}
+function applyEvidence(like,label,action=null,record=true){
+ if(record)pushUndo();
+ if(isJointPreset()){
+   Object.keys(jw).forEach(k=>{
+     const v=jm[k],L=v.reduce((s,p,i)=>s+p*like[i],0);
+     jw[k]*=L;
+     jm[k]=normalizeMode(v.map((p,i)=>p*like[i]));
+   });
+   normalizeJoint();
+ }else{
+   Object.keys(tw).forEach(k=>{
+     const v=md[k],L=v.reduce((s,p,i)=>s+p*like[i],0);
+     tw[k]*=L;
+     md[k]=normalizeMode(v.map((p,i)=>p*like[i]));
+   });
+   normalizeTables();
+ }
+ hist.push(label);if(record&&action)actions.push(action);render()
+}
+function setRole(r){role=r;document.getElementById('role-replay').classList.toggle('active',r==='replay');document.getElementById('role-other').classList.toggle('active',r==='other')}
+const MINI_ACTION_LABELS={
+ 1:'後ろを向く / 去る',
+ 2:'ため息 / 不機嫌',
+ 3:'左肩を出す / 微笑',
+ 4:'両肩を出す / 笑う',
+ 5:'妖艶なポーズ / 大笑い'
+};
+function mini(p){
+ applyEvidence((role==='replay'?MINI_REPLAY:MINI_OTHER)[p],
+   `ミニキャラ「${MINI_ACTION_LABELS[p]||`P${p}`}」 ${role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,
+   {type:'mini',p,role})
+}
+function orb(x){applyEvidence(ORB[x],`忍びの玉「${x}」`,{type:'orb',x})}
+function cplus(label){applyEvidence([0,0,1,1],`${label} → C以上濃厚`,{type:'cplus',label})}
+function oboro(x){applyEvidence(OBORO[x],`朧BC「${x}」`,{type:'oboro',x})}
+function chance(record=true){
+ if(record)pushUndo();
+ if(isJointPreset()){
+   Object.keys(jm).forEach(k=>{
+     const s=+k.split('-')[0],M=(s%2===0)?CHANCE_EVEN:CHANCE_ODD;
+     const src=jm[k],dst=[0,0,0,0];
+     for(let i=0;i<4;i++)for(let j=0;j<4;j++)dst[j]+=src[i]*M[i][j];
+     jm[k]=dst;
+   });
+ }else{
+   const M=(setting%2===0)?CHANCE_EVEN:CHANCE_ODD;
+   Object.keys(md).forEach(k=>{
+     const src=md[k],dst=[0,0,0,0];
+     for(let i=0;i<4;i++)for(let j=0;j<4;j++)dst[j]+=src[i]*M[i][j];
+     md[k]=dst;
+   });
+ }
+ hist.push('チャンス目 +1');if(record)actions.push({type:'chance'});render()
+}
+function nextBC(record=true){
+ if(record)pushUndo();slip++;
+ if(isJointPreset()){
+   Object.keys(jw).forEach(k=>{
+     const t=+k.split('-')[1];
+     if(!TABLES[t][slip]){jw[k]=0;jm[k]=[0,0,0,0]}
+   });
+   normalizeJoint();
+   Object.keys(jw).forEach(k=>{
+     if(jw[k]>0){
+       const t=+k.split('-')[1];
+       jm[k]=jointBaselineForTable(t);
+     }
+   });
+ }else{
+   Object.keys(tw).forEach(k=>{if(!TABLES[k][slip]){tw[k]=0;md[k]=[0,0,0,0]}});
+   normalizeTables();
+   Object.keys(tw).forEach(k=>{if(tw[k]>0)md[k]=baselineForTable(+k)});
+ }
+ hist.push(`BCスルー → ${slip}スルーへ`);if(record)actions.push({type:'bc'});render()
+}
+function replayActions(){
+ const saved=JSON.parse(JSON.stringify(actions));
+ initAtStartSlip();
+ actions=[];
+ saved.forEach(a=>{
+   if(a.type==='mini'){
+     const like=(a.role==='replay'?MINI_REPLAY:MINI_OTHER)[a.p];
+     applyEvidence(like,`ミニキャラ「${MINI_ACTION_LABELS[a.p]||`P${a.p}`}」 ${a.role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,null,false);
+   }else if(a.type==='orb'){
+     applyEvidence(ORB[a.x],`忍びの玉「${a.x}」`,null,false);
+   }else if(a.type==='cplus'){
+     applyEvidence([0,0,1,1],`${a.label} → C以上濃厚`,null,false);
+   }else if(a.type==='oboro'){
+     applyEvidence(OBORO[a.x],`朧BC「${a.x}」`,null,false);
+   }else if(a.type==='chance'){
+     chance(false);
+   }else if(a.type==='bc'){
+     nextBC(false);
+   }
+ });
+ actions=saved;
+ undoStack=[];
+ render();
+}
+function globalMode(){
+ let g=[0,0,0,0];
+ if(isJointPreset()){
+   Object.keys(jw).forEach(k=>{for(let i=0;i<4;i++)g[i]+=jw[k]*jm[k][i]});
+ }else{
+   Object.keys(tw).forEach(k=>{for(let i=0;i<4;i++)g[i]+=tw[k]*md[k][i]});
+ }
+ return normalizeMode(g)
+}
+function showTableDetail(t){
+ selectedTable=+t;const seq=TABLES[selectedTable],labels=['0S','1S','2S','3S','4S','5S','6S','7S'];
+ const cells=seq.map((m,i)=>`<div class="detailcell ${i===slip?'current':''}"><div class="pos">${labels[i]}</div><div class="m">${m??'—'}</div></div>`).join('');
+ const box=document.getElementById('tableDetailInline');
+ const preset=document.getElementById('settingPreset')?.value;
+ const jointLabel=preset==='unknown'?'設定不明・混合計算':preset==='odd'?'奇数っぽい・混合計算':preset==='even'?'偶数っぽい・混合計算':'';
+ const rateLabel=isJointPreset()?jointLabel:`設定${setting} 初期選択率 ${(RATE[setting][selectedTable-1]??0).toFixed(1)}%`; box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><div><b>T${selectedTable}</b> <span class="small">${rateLabel}</span></div><button onclick="closeTableDetail()" style="padding:4px 8px;font-size:11px">閉じる</button></div><div class="detailgrid">${cells}</div>`;
+ box.style.display='block'
+}
+function closeTableDetail(){selectedTable=null;document.getElementById('tableDetailInline').style.display='none'}
+const VOICE_TARGETS={
+ '何かが起こる予感がします…':[8,9,11,12,13,14,15,16],
+ '怪しき気配じゃ':[8,9,13,14,15,16],
+ '宴の支度が整っております':[15,16]
+};
+function visibleTableEntries(){
+ let arr=Object.entries(isJointPreset()?aggregateJointTables():tw).sort((a,b)=>b[1]-a[1]).filter(x=>x[1]>0);
+ const filter=document.getElementById('voiceFilter');
+ const voice=document.getElementById('voice');
+ if(filter&&filter.checked&&voice){
+   const targets=VOICE_TARGETS[voice.value];
+   if(Array.isArray(targets)) arr=arr.filter(([t])=>targets.includes(+t));
+ }
+ return arr;
+}
+function render(){
+ document.getElementById('slip').textContent=slip;
+ const g=globalMode(),labels=['A','B','C','D'];
+ document.getElementById('modes').innerHTML=g.map((p,i)=>`<div class="mode"><span>${labels[i]}</span><b>${(p*100).toFixed(1)}%</b><div class="bar"><div class="fill" style="width:${p*100}%"></div></div></div>`).join('');
+ const arr=visibleTableEntries();
+ document.getElementById('tables').innerHTML=arr.map(([t,p])=>`<div class="tableitem" onclick="showTableDetail(${t})"><div class="tn">T${t}</div><div class="tp">${(p*100).toFixed(1)}%</div></div>`).join('');
+ document.getElementById('history').innerHTML=hist.slice().reverse().map((x,i)=>`<div>${hist.length-i}. ${x}</div>`).join('')||'<div class="small">まだ入力はありません</div>';
+ if(selectedTable)showTableDetail(selectedTable)
+}
+init();
+</script>
+
+<script>
+(function(){
+  const preset = document.getElementById('settingPreset');
+  const info = document.getElementById('presetInfo');
+  const exact = document.getElementById('setting');
+
+  function updatePresetInfo(){
+    const v = preset.value;
+    let text = '';
+    if(v === 'unknown') text = '不明：設定1 40% / 設定2 40% / 設定3〜6 各5%（計算反映）';
+    else if(v === 'odd') text = '奇数っぽい：設定1・3・5 各23.33% / 設定2・4・6 各10%（計算反映）';
+    else if(v === 'even') text = '偶数っぽい：設定2・4・6 各23.33% / 設定1・3・5 各10%（計算反映）';
+    else text = '設定' + v + '：履歴を残したまま、この設定で再計算';
+
+    info.textContent = text + ((v==='unknown'||v==='odd'||v==='even')?'　※設定内のテーブル率は100%に正規化して計算':'');
+
+    if(v==='unknown'||v==='odd'||v==='even'){
+      replayActions();
+    }else if(/^[1-6]$/.test(v)){
+      exact.value = v;
+      exact.dispatchEvent(new Event('change'));
+    }
+  }
+
+  preset.addEventListener('change', updatePresetInfo);
+  updatePresetInfo();
+})();
+</script>
+
+
+<script>
+(function(){
+  let prev=[null,null,null,null];
+  function readModes(){
+    return Array.from(document.querySelectorAll('#modes .mode b')).map(el=>{
+      const n=parseFloat(el.textContent);
+      return Number.isFinite(n)?n:null;
+    });
+  }
+  function animateModes(){
+    const vals=readModes();
+    if(vals.length!==4)return;
+    const cards=Array.from(document.querySelectorAll('#modes .mode'));
+    cards.forEach((card,i)=>{
+      card.classList.remove('modePulse','modeUp','modeDown');
+      void card.offsetWidth;
+      if(prev[i]===null){
+        card.classList.add('modePulse');
+      }else if(vals[i]>prev[i]+0.04){
+        card.classList.add('modeUp');
+      }else if(vals[i]<prev[i]-0.04){
+        card.classList.add('modeDown');
+      }else{
+        card.classList.add('modePulse');
+      }
+    });
+    prev=vals;
+  }
+  function initObserver(){
+    const target=document.getElementById('modes');
+    if(!target)return;
+    prev=readModes();
+    const obs=new MutationObserver(()=>requestAnimationFrame(animateModes));
+    obs.observe(target,{childList:true,subtree:true,characterData:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initObserver);
+  else initObserver();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script></body>
+</html>
