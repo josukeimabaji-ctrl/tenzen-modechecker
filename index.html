@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>天膳 MODE CHECKER BETA | JO助</title>
+<title>天膳 MODE CHECKER v0.3.15</title>
 <style>
 :root{--bg:#0f1115;--card:#171a21;--line:#2a2f3a;--text:#f3f5f7;--muted:#aeb6c2;--accent:#4da3ff;--warn:#8a5b00}
 *{box-sizing:border-box}
@@ -56,6 +56,9 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
 }
 .livePanel .liveHead{margin-bottom:8px}
 .livePanel .liveSlip{font-size:23px;font-weight:800}
+.livePanel .chanceNow{text-align:center;min-width:105px}
+.livePanel .chanceNow b{display:block;font-size:23px;line-height:1.1;color:#ffd166}
+.livePanel .chanceNow .small{white-space:nowrap}
 .livePanel #settingPreset{min-width:135px}
 .livePanel .liveModes .mode{padding:6px 2px}
 .livePanel .liveModes .mode b{font-size:20px}
@@ -134,20 +137,20 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
   .startSlipNote{font-size:10px}
 }
 </style>
-<meta name="theme-color" content="#111827">
-<meta name="description" content="スマスロ 絆2 天膳 BLACK EDITION モード判別ツール">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 <div class="wrap">
-<h1>天膳 MODE CHECKER <span class="small">BETA • by JO助</span></h1>
+<h1>天膳 MODE CHECKER <span class="small">v0.3.15</span></h1>
 
 <div class="card livePanel" id="livePanel">
   <div class="row liveHead" style="justify-content:space-between;align-items:center">
     <div>
       <div class="small">現在</div>
       <div class="liveSlip"><span id="slip">0</span>スルー</div>
+    </div>
+    <div class="chanceNow">
+      <div class="small">今周期チャンス目</div>
+      <b><span id="chanceCount">0</span>回</b>
     </div>
     <div>
       <div class="small">設定条件</div>
@@ -214,19 +217,20 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
 </div>
 
 <div class="card">
-  <div class="sectiontitle">ミニキャラ（陽炎 / 天膳）</div>
+  <div class="sectiontitle">ミニキャラ</div>
   <div class="row">
     <button onclick="setRole('replay')" id="role-replay">リプレイ</button>
     <button onclick="setRole('other')" id="role-other" class="active">ハズレ・ベル・チャンス目</button>
   </div>
   <div class="small" style="margin-top:6px">※ベル揃いは共通ベルを除く。チャンス目のゲームはこの区分でミニキャラを入力し、別途「チャンス目 +1」も入力。</div>
-  <div class="row" style="margin-top:8px">
-    <button onclick="mini(1)">後ろを向く / 去る</button>
-    <button onclick="mini(2)">ため息 / 不機嫌</button>
-    <button onclick="mini(3)">左肩を出す / 微笑</button>
-    <button onclick="mini(4)">両肩を出す / 笑う</button>
-    <button onclick="mini(5)">妖艶なポーズ / 大笑い</button>
+
+  <div class="small" style="margin-top:10px">キャラを選択</div>
+  <div class="row" style="margin-top:5px">
+    <button onclick="setMiniChar('kagero')" id="mini-kagero" class="active">陽炎</button>
+    <button onclick="setMiniChar('tenzen')" id="mini-tenzen">天膳</button>
   </div>
+
+  <div class="row" id="mini-actions" style="margin-top:8px"></div>
 </div>
 
 <div class="card">
@@ -247,9 +251,7 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
     <button onclick="cplus('入賞LED白')">入賞LED白</button>
     <button onclick="cplus('赤墨→吉田宿')">赤墨→吉田宿</button>
     <button onclick="cplus('響八郎強→吉田宿')">響八郎強→吉田宿</button>
-    <button onclick="cplus('ステージ移行矛盾')">ステージ移行矛盾</button>
   </div>
-  <div class="small" style="margin-top:6px">ステージ移行矛盾：甲賀卍谷→七里の渡し / 伊賀鍔隠れ→佐屋路</div>
 </div>
 
 <div class="card">
@@ -278,10 +280,6 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
 </div>
 </div>
 
-<div style="text-align:center;padding:18px 12px 92px;color:#8b93a7;font-size:12px;line-height:1.7">
-<div>天膳 MODE CHECKER • BETA</div><div>Developed by JO助</div>
-<div style="margin-top:4px">解析情報をもとにした参考判別ツールです。実戦結果を保証するものではありません。</div>
-<div>Build v0.3.16</div></div>
 <div class="sticky">
   <div class="inner">
     <button class="warn" onclick="chance()">チャンス目 ＋1</button>
@@ -315,11 +313,11 @@ const OBORO={'星空':[.500,.156,.100,.125],'流れ星':[.500,.244,.150,.125],'�
 const CHANCE_ODD=[[.500,.484,.012,.004],[0,.664,.332,.004],[0,0,.750,.250],[0,0,0,1]];
 const CHANCE_EVEN=[[.332,.644,.020,.004],[0,.500,.496,.004],[0,0,.664,.336],[0,0,0,1]];
 
-let setting=1,startSlip=0,slip=0,role='other',hist=[],actions=[],tw={},md={},jw={},jm={},undoStack=[],selectedTable=null;
+let setting=1,startSlip=0,slip=0,chanceCount=0,role='other',miniChar='kagero',hist=[],actions=[],tw={},md={},jw={},jm={},undoStack=[],selectedTable=null;
 
-function snapshot(){return {setting,startSlip,slip,role,hist:[...hist],actions:JSON.parse(JSON.stringify(actions)),tw:JSON.parse(JSON.stringify(tw)),md:JSON.parse(JSON.stringify(md)),jw:JSON.parse(JSON.stringify(jw)),jm:JSON.parse(JSON.stringify(jm)),selectedTable}}
+function snapshot(){return {setting,startSlip,slip,chanceCount,role,miniChar,hist:[...hist],actions:JSON.parse(JSON.stringify(actions)),tw:JSON.parse(JSON.stringify(tw)),md:JSON.parse(JSON.stringify(md)),jw:JSON.parse(JSON.stringify(jw)),jm:JSON.parse(JSON.stringify(jm)),selectedTable}}
 function pushUndo(){undoStack.push(snapshot());if(undoStack.length>100)undoStack.shift()}
-function restoreState(s){setting=s.setting;startSlip=(s.startSlip??0);slip=s.slip;role=s.role;hist=[...s.hist];actions=JSON.parse(JSON.stringify(s.actions||[]));tw=JSON.parse(JSON.stringify(s.tw||{}));md=JSON.parse(JSON.stringify(s.md||{}));jw=JSON.parse(JSON.stringify(s.jw||{}));jm=JSON.parse(JSON.stringify(s.jm||{}));selectedTable=s.selectedTable;document.getElementById('setting').value=String(setting);const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);setRole(role);render()}
+function restoreState(s){setting=s.setting;startSlip=(s.startSlip??0);slip=s.slip;chanceCount=(s.chanceCount??0);role=s.role;miniChar=s.miniChar||'kagero';hist=[...s.hist];actions=JSON.parse(JSON.stringify(s.actions||[]));tw=JSON.parse(JSON.stringify(s.tw||{}));md=JSON.parse(JSON.stringify(s.md||{}));jw=JSON.parse(JSON.stringify(s.jw||{}));jm=JSON.parse(JSON.stringify(s.jm||{}));selectedTable=s.selectedTable;document.getElementById('setting').value=String(setting);const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);setRole(role);setMiniChar(miniChar);render()}
 function undoLast(){if(!undoStack.length){alert('戻せる履歴がありません');return}restoreState(undoStack.pop())}
 
 function init(){
@@ -328,7 +326,7 @@ function init(){
  s.value='1';
  s.onchange=()=>{setting=+s.value;replayActions()};
  const ss=document.getElementById('startSlip');if(ss)ss.value=String(startSlip);
- resetAll(false);updateVoiceHint();
+ resetAll(false);setMiniChar(miniChar);updateVoiceHint();
 }
 function updateVoiceHint(){
  const v=document.getElementById('voice').value;
@@ -373,7 +371,7 @@ function aggregateJointTables(){
  return out;
 }
 function initAtStartSlip(){
- slip=startSlip;hist=[];actions=[];tw={};md={};jw={};jm={};selectedTable=null;
+ slip=startSlip;chanceCount=0;hist=[];actions=[];tw={};md={};jw={};jm={};selectedTable=null;
  if(isJointPreset()){
    const prior=jointPresetPrior();
    for(let s=1;s<=6;s++){
@@ -438,17 +436,28 @@ function applyEvidence(like,label,action=null,record=true){
  hist.push(label);if(record&&action)actions.push(action);render()
 }
 function setRole(r){role=r;document.getElementById('role-replay').classList.toggle('active',r==='replay');document.getElementById('role-other').classList.toggle('active',r==='other')}
-const MINI_ACTION_LABELS={
- 1:'後ろを向く / 去る',
- 2:'ため息 / 不機嫌',
- 3:'左肩を出す / 微笑',
- 4:'両肩を出す / 笑う',
- 5:'妖艶なポーズ / 大笑い'
+const MINI_ACTIONS={
+ kagero:{1:'後ろを向く',2:'ため息',3:'左肩を出す',4:'両肩を出す',5:'妖艶なポーズ'},
+ tenzen:{1:'去る',2:'不機嫌',3:'微笑',4:'笑う',5:'大笑い'}
 };
+function miniCharName(c){return c==='tenzen'?'天膳':'陽炎'}
+function miniActionLabel(p,c=miniChar){return MINI_ACTIONS[c]?.[p]||`P${p}`}
+function renderMiniActions(){
+ const box=document.getElementById('mini-actions');if(!box)return;
+ box.innerHTML=[1,2,3,4,5].map(p=>`<button onclick="mini(${p})">${miniActionLabel(p)}</button>`).join('');
+}
+function setMiniChar(c){
+ miniChar=(c==='tenzen')?'tenzen':'kagero';
+ const k=document.getElementById('mini-kagero'),t=document.getElementById('mini-tenzen');
+ if(k)k.classList.toggle('active',miniChar==='kagero');
+ if(t)t.classList.toggle('active',miniChar==='tenzen');
+ renderMiniActions();
+}
 function mini(p){
+ const c=miniChar;
  applyEvidence((role==='replay'?MINI_REPLAY:MINI_OTHER)[p],
-   `ミニキャラ「${MINI_ACTION_LABELS[p]||`P${p}`}」 ${role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,
-   {type:'mini',p,role})
+   `ミニキャラ ${miniCharName(c)}「${miniActionLabel(p,c)}」 ${role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,
+   {type:'mini',p,role,char:c})
 }
 function orb(x){applyEvidence(ORB[x],`忍びの玉「${x}」`,{type:'orb',x})}
 function cplus(label){applyEvidence([0,0,1,1],`${label} → C以上濃厚`,{type:'cplus',label})}
@@ -470,10 +479,11 @@ function chance(record=true){
      md[k]=dst;
    });
  }
+ chanceCount++;
  hist.push('チャンス目 +1');if(record)actions.push({type:'chance'});render()
 }
 function nextBC(record=true){
- if(record)pushUndo();slip++;
+ if(record)pushUndo();slip++;chanceCount=0;
  if(isJointPreset()){
    Object.keys(jw).forEach(k=>{
      const t=+k.split('-')[1];
@@ -500,7 +510,8 @@ function replayActions(){
  saved.forEach(a=>{
    if(a.type==='mini'){
      const like=(a.role==='replay'?MINI_REPLAY:MINI_OTHER)[a.p];
-     applyEvidence(like,`ミニキャラ「${MINI_ACTION_LABELS[a.p]||`P${a.p}`}」 ${a.role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,null,false);
+     const c=a.char||'kagero';
+     applyEvidence(like,`ミニキャラ ${miniCharName(c)}「${miniActionLabel(a.p,c)}」 ${a.role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,null,false);
    }else if(a.type==='orb'){
      applyEvidence(ORB[a.x],`忍びの玉「${a.x}」`,null,false);
    }else if(a.type==='cplus'){
@@ -553,6 +564,7 @@ function visibleTableEntries(){
 }
 function render(){
  document.getElementById('slip').textContent=slip;
+ const cc=document.getElementById('chanceCount');if(cc)cc.textContent=chanceCount;
  const g=globalMode(),labels=['A','B','C','D'];
  document.getElementById('modes').innerHTML=g.map((p,i)=>`<div class="mode"><span>${labels[i]}</span><b>${(p*100).toFixed(1)}%</b><div class="bar"><div class="fill" style="width:${p*100}%"></div></div></div>`).join('');
  const arr=visibleTableEntries();
@@ -632,7 +644,5 @@ init();
   else initObserver();
 })();
 </script>
-<script>
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
-</script></body>
+</body>
 </html>
