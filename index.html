@@ -222,15 +222,14 @@ select{background:#222733;color:var(--text);border:1px solid var(--line);padding
     <button onclick="setRole('replay')" id="role-replay">リプレイ</button>
     <button onclick="setRole('other')" id="role-other" class="active">ハズレ・ベル・チャンス目</button>
   </div>
-  <div class="small" style="margin-top:6px">※ベル揃いは共通ベルを除く。チャンス目のゲームはこの区分でミニキャラを入力し、別途「チャンス目 +1」も入力。</div>
-
-  <div class="small" style="margin-top:10px">キャラを選択</div>
-  <div class="row" style="margin-top:5px">
-    <button onclick="setMiniChar('kagero')" id="mini-kagero" class="active">陽炎</button>
-    <button onclick="setMiniChar('tenzen')" id="mini-tenzen">天膳</button>
+  <div class="small" style="margin-top:6px">※陽炎／天膳の選択は不要。同じP番号として入力します。ベル揃いは共通ベルを除く。チャンス目のゲームはここでミニキャラを入力し、別途「チャンス目 +1」も入力。</div>
+  <div class="row" style="margin-top:8px">
+    <button onclick="mini(1)">P1 後ろ/去る</button>
+    <button onclick="mini(2)">P2 ため息/不機嫌</button>
+    <button onclick="mini(3)">P3 左肩/微笑</button>
+    <button onclick="mini(4)">P4 両肩/笑う</button>
+    <button onclick="mini(5)">P5 妖艶/大笑い</button>
   </div>
-
-  <div class="row" id="mini-actions" style="margin-top:8px"></div>
 </div>
 
 <div class="card">
@@ -436,28 +435,20 @@ function applyEvidence(like,label,action=null,record=true){
  hist.push(label);if(record&&action)actions.push(action);render()
 }
 function setRole(r){role=r;document.getElementById('role-replay').classList.toggle('active',r==='replay');document.getElementById('role-other').classList.toggle('active',r==='other')}
-const MINI_ACTIONS={
- kagero:{1:'後ろを向く',2:'ため息',3:'左肩を出す',4:'両肩を出す',5:'妖艶なポーズ'},
- tenzen:{1:'去る',2:'不機嫌',3:'微笑',4:'笑う',5:'大笑い'}
+const MINI_LABELS={
+ 1:'P1 後ろ/去る',
+ 2:'P2 ため息/不機嫌',
+ 3:'P3 左肩/微笑',
+ 4:'P4 両肩/笑う',
+ 5:'P5 妖艶/大笑い'
 };
-function miniCharName(c){return c==='tenzen'?'天膳':'陽炎'}
-function miniActionLabel(p,c=miniChar){return MINI_ACTIONS[c]?.[p]||`P${p}`}
-function renderMiniActions(){
- const box=document.getElementById('mini-actions');if(!box)return;
- box.innerHTML=[1,2,3,4,5].map(p=>`<button onclick="mini(${p})">${miniActionLabel(p)}</button>`).join('');
-}
-function setMiniChar(c){
- miniChar=(c==='tenzen')?'tenzen':'kagero';
- const k=document.getElementById('mini-kagero'),t=document.getElementById('mini-tenzen');
- if(k)k.classList.toggle('active',miniChar==='kagero');
- if(t)t.classList.toggle('active',miniChar==='tenzen');
- renderMiniActions();
-}
+function miniActionLabel(p){return MINI_LABELS[p]||`P${p}`}
+function renderMiniActions(){}
+function setMiniChar(c){miniChar='kagero'}
 function mini(p){
- const c=miniChar;
  applyEvidence((role==='replay'?MINI_REPLAY:MINI_OTHER)[p],
-   `ミニキャラ ${miniCharName(c)}「${miniActionLabel(p,c)}」 ${role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,
-   {type:'mini',p,role,char:c})
+   `ミニキャラ ${miniActionLabel(p)} ${role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,
+   {type:'mini',p,role})
 }
 function orb(x){applyEvidence(ORB[x],`忍びの玉「${x}」`,{type:'orb',x})}
 function cplus(label){applyEvidence([0,0,1,1],`${label} → C以上濃厚`,{type:'cplus',label})}
@@ -510,8 +501,7 @@ function replayActions(){
  saved.forEach(a=>{
    if(a.type==='mini'){
      const like=(a.role==='replay'?MINI_REPLAY:MINI_OTHER)[a.p];
-     const c=a.char||'kagero';
-     applyEvidence(like,`ミニキャラ ${miniCharName(c)}「${miniActionLabel(a.p,c)}」 ${a.role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,null,false);
+     applyEvidence(like,`ミニキャラ ${miniActionLabel(a.p)} ${a.role==='replay'?'リプレイ':'ハズレ・ベル・チャンス目'}`,null,false);
    }else if(a.type==='orb'){
      applyEvidence(ORB[a.x],`忍びの玉「${a.x}」`,null,false);
    }else if(a.type==='cplus'){
